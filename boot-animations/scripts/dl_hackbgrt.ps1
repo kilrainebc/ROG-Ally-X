@@ -12,8 +12,8 @@ New-Item -Path $hackbgrtDir -ItemType Directory -Force | Out-Null
 Write-Host "Created directory: $hackbgrtDir"
 
 # Latest version as of April 2025
-$version = "1.9.0"
-$downloadUrl = "https://github.com/Metabolix/HackBGRT/releases/download/v$version/HackBGRT-v$version.zip"
+$version = "2.5.1"
+$downloadUrl = "https://github.com/Metabolix/HackBGRT/releases/download/v$version/HackBGRT-$version.zip"
 $outputFile = "$toolsPath\HackBGRT.zip"
 
 Write-Host "Downloading HackBGRT v$version from GitHub..."

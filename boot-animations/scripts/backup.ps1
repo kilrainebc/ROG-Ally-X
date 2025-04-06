@@ -1,4 +1,4 @@
-   # Boot Files Backup Script for ROG Ally X
+# Boot Files Backup Script for ROG Ally X
 # This script creates backups of critical Windows boot files
 # Run as Administrator!
 
@@ -19,6 +19,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $backupPath = Join-Path -Path $repoRoot -ChildPath "boot-animations\backups"
 $systemPath = "$env:SystemRoot\System32"
+$bootResourcesPath = "$env:SystemRoot\Boot\Resources"
 $dateString = (Get-Date).ToString("yyyy-MM-dd_HHmmss")
 $backupDir = "$backupPath\$dateString"
 
@@ -26,13 +27,17 @@ $backupDir = "$backupPath\$dateString"
 New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
 Write-Host "Creating backup directory: $backupDir" -ForegroundColor Cyan
 
-# Files to backup
-$filesToBackup = @(
-    "bootres.dll",
+# Files to backup from System32
+$system32FilesToBackup = @(
     "winload.exe",
     "winload.efi",
     "boot.stl",
     "bootmgfw.efi"
+)
+
+# Files to backup from Boot\Resources
+$bootResourcesToBackup = @(
+    "bootres.dll"
 )
 
 # Log file
@@ -41,9 +46,39 @@ $logFile = "$backupDir\backup_log.txt"
 "======================================" | Out-File -FilePath $logFile -Append
 "" | Out-File -FilePath $logFile -Append
 
-# Backup each file
-foreach ($file in $filesToBackup) {
+# Backup System32 files
+Write-Host "Backing up files from $systemPath..." -ForegroundColor Cyan
+foreach ($file in $system32FilesToBackup) {
     $sourcePath = "$systemPath\$file"
+    $destPath = "$backupDir\$file"
+    
+    # Check if file exists
+    if (Test-Path -Path $sourcePath) {
+        try {
+            # Copy file
+            Copy-Item -Path $sourcePath -Destination $destPath -Force
+            $status = "SUCCESS"
+            Write-Host "Backed up: $file" -ForegroundColor Green
+        }
+        catch {
+            $status = "FAILED: $_"
+            Write-Host "Failed to backup: $file" -ForegroundColor Red
+            Write-Host $_.Exception.Message -ForegroundColor Red
+        }
+    }
+    else {
+        $status = "NOT FOUND"
+        Write-Host "File not found: $file" -ForegroundColor Yellow
+    }
+    
+    # Log the result
+    "$file : $status" | Out-File -FilePath $logFile -Append
+}
+
+# Backup Boot\Resources files
+Write-Host "Backing up files from $bootResourcesPath..." -ForegroundColor Cyan
+foreach ($file in $bootResourcesToBackup) {
+    $sourcePath = "$bootResourcesPath\$file"
     $destPath = "$backupDir\$file"
     
     # Check if file exists
@@ -108,6 +143,7 @@ if (-not `$isAdmin) {
 
 # Define paths
 `$systemPath = "`$env:SystemRoot\System32"
+`$bootResourcesPath = "`$env:SystemRoot\Boot\Resources"
 `$backupDir = "`$PSScriptRoot"
 `$logFile = "`$backupDir\restore_log.txt"
 
@@ -116,16 +152,15 @@ if (-not `$isAdmin) {
 "======================================" | Out-File -FilePath `$logFile -Append
 "" | Out-File -FilePath `$logFile -Append
 
-# Restore each file
-`$filesToRestore = @(
-    "bootres.dll",
+# Restore System32 files
+`$system32FilesToRestore = @(
     "winload.exe",
     "winload.efi",
     "boot.stl",
     "bootmgfw.efi"
 )
 
-foreach (`$file in `$filesToRestore) {
+foreach (`$file in `$system32FilesToRestore) {
     `$sourcePath = "`$backupDir\`$file"
     `$destPath = "`$systemPath\`$file"
     
@@ -133,6 +168,38 @@ foreach (`$file in `$filesToRestore) {
     if (Test-Path -Path `$sourcePath) {
         try {
             # Copy file back to system directory
+            Copy-Item -Path `$sourcePath -Destination `$destPath -Force
+            `$status = "SUCCESS"
+            Write-Host "Restored: `$file" -ForegroundColor Green
+        }
+        catch {
+            `$status = "FAILED: `$_"
+            Write-Host "Failed to restore: `$file" -ForegroundColor Red
+            Write-Host `$_.Exception.Message -ForegroundColor Red
+        }
+    }
+    else {
+        `$status = "NOT FOUND IN BACKUP"
+        Write-Host "Backup file not found: `$file" -ForegroundColor Yellow
+    }
+    
+    # Log the result
+    "`$file : `$status" | Out-File -FilePath `$logFile -Append
+}
+
+# Restore Boot\Resources files
+`$bootResourcesToRestore = @(
+    "bootres.dll"
+)
+
+foreach (`$file in `$bootResourcesToRestore) {
+    `$sourcePath = "`$backupDir\`$file"
+    `$destPath = "`$bootResourcesPath\`$file"
+    
+    # Check if backup file exists
+    if (Test-Path -Path `$sourcePath) {
+        try {
+            # Copy file back to boot resources directory
             Copy-Item -Path `$sourcePath -Destination `$destPath -Force
             `$status = "SUCCESS"
             Write-Host "Restored: `$file" -ForegroundColor Green
